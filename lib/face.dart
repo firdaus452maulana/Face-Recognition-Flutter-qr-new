@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:camera/camera.dart';
 import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 import 'package:flutter/material.dart';
+
 //import 'detector_painters.dart';
 import 'utils.dart';
 import 'package:image/image.dart' as imglib;
@@ -23,6 +24,7 @@ import 'package:face_recognition/devicestorage.dart';
 import 'package:face_recognition/datastorage.dart';
 import 'package:face_recognition/memberstorage.dart';
 import 'package:face_recognition/setconstorage.dart';
+
 //import 'package:face_recognition/scan_qrcode.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:tflite/tflite.dart';
@@ -34,7 +36,6 @@ import 'package:http/http.dart' as http;
 enum TtsState { playing, stopped }
 
 class FaceRec extends StatefulWidget {
-
   var state = FaceRecState();
 
   @override
@@ -47,6 +48,7 @@ class FaceRec extends StatefulWidget {
 class FaceRecState extends State<FaceRec> {
   // static FaceRecState instance = new FaceRecState();
   File jsonFile;
+
   // ignore: unused_field
   dynamic _scanResults;
   CameraController _camera;
@@ -57,8 +59,10 @@ class FaceRecState extends State<FaceRec> {
   double threshold = 0.9;
   Directory tempDir;
   List e1;
+
   // ignore: unused_field
   bool _faceFound = false;
+
   //double x, y, w, h;
   bool showStatusBar = false;
   bool showRegister = false;
@@ -74,6 +78,7 @@ class FaceRecState extends State<FaceRec> {
   List<Contact1> contactList1;
   int imageWidth;
   int imageHeight;
+
   // ignore: unused_field
   //bool _loading = false;
   // ignore: unused_field
@@ -84,8 +89,10 @@ class FaceRecState extends State<FaceRec> {
   String _tgl;
   String _jam;
   int mul = 0;
+
   //String _platformImei = 'Unknown';
   String uniqueId = "Unknown";
+
   //SettingStorage _settingStorage;
   var parsedJson;
   Setcon setcon;
@@ -110,6 +117,7 @@ class FaceRecState extends State<FaceRec> {
   String _res = "PENGUNJUNG";
   double x, y, w, h;
   String _status = "unregister";
+
   //String _guest;
   DeviceStorage devicestorage = new DeviceStorage();
   DataStorage datastorage = new DataStorage();
@@ -126,11 +134,14 @@ class FaceRecState extends State<FaceRec> {
   String _nama = "Riyanto";
   String _namefile = "coba.png";
   String _namepath = "d:/data/";
+
   //String _str = "";
   bool isSwitchedMask = false;
   TextEditingController namaController = TextEditingController();
   int jumSend = 0;
   String _str;
+  bool _qrOn = false;
+
   //String _pilih = "_NOMASK";
   //String _mask = "0";
   /*BluetoothConnection connection;
@@ -507,6 +518,7 @@ class FaceRecState extends State<FaceRec> {
     if ((insuhu > 42.00) || (insuhu < 24.00)) outsuhu = insuhu;
     return outsuhu;
   }
+
   /*double kalibrasi(double insuhu) {
     double outsuhu;
     if ((insuhu >= 27.00) && (insuhu <= 27.50)) outsuhu = 35.80;
@@ -597,6 +609,7 @@ class FaceRecState extends State<FaceRec> {
     if ((insuhu > 42.00) || (insuhu < 23.50)) outsuhu = insuhu;
     return outsuhu;
   }
+
   /*double kalibrasi1(double insuhu) {
     double outsuhu;
     if ((insuhu >= 25.50) && (insuhu <= 26.00)) outsuhu = 35.80;
@@ -703,6 +716,8 @@ class FaceRecState extends State<FaceRec> {
   void _initializeCamera() async {
     //int index1, index2, i;
     await loadModel();
+    String rest;
+    int cntTimer = 0;
     CameraDescription description = await getCamera(_direction);
 
     ImageRotation rotation = rotationIntToImageRotation(
@@ -726,7 +741,7 @@ class FaceRecState extends State<FaceRec> {
       data = json.decode(jsonFile.readAsStringSync());
     }
     //data = json.decode(jsonFile.readAsStringSync());
-    _camera.startImageStream((CameraImage image) {
+    _camera.startImageStream((CameraImage image) async {
       if (_camera != null) {
         if (_isDetecting) return;
         _isDetecting = true;
@@ -734,12 +749,43 @@ class FaceRecState extends State<FaceRec> {
         log("Lagi deteksi");
         String res;
         dynamic finalResult = Multimap<String, Face>();
+
+        imglib.Image convertedImageFull =
+            _convertCameraImage(image, _direction);
+
+        String pathFull = MyApp.imgDir;
+        String namafileFull = '$deviceID-fullCapt.jpg';
+        pathFull = pathFull + "/" + namafileFull;
+        var jpgFullFile = imglib.encodeJpg(convertedImageFull);
+        new File(pathFull).writeAsBytesSync(jpgFullFile);
+
+        // String barcode = await scanner.scanPath(pathFull);
+        // log(barcode);
+        FlutterQrReader.imgScan(pathFull).then((value) {
+          if (value.length >= 2) {
+            rest = value;
+            log(rest);
+            setState(() {
+              _qrOn = true;
+            });
+            cntTimer++;
+            if (cntTimer == 1) {
+              Timer(Duration(seconds: 5), () {
+                setState(() {
+                  rest = null;
+                  cntTimer = 0;
+                  _qrOn = false;
+                });
+              });
+            }
+          }
+        });
+
         detect(image, _getDetectionMethod(), rotation).then(
           (dynamic result) async {
             if (result.length == 0) {
               _faceFound = false;
-            }
-            else {
+            } else {
               _faceFound = true;
             }
             Face _face;
@@ -758,17 +804,6 @@ class FaceRecState extends State<FaceRec> {
               y = (_face.boundingBox.top - 10);
               w = (_face.boundingBox.width + 20);
               h = (_face.boundingBox.height + 20);
-
-              String pathFull = MyApp.imgDir;
-              String namafileFull = '$deviceID-fullCapt.jpg';
-              pathFull = pathFull + "/" + namafileFull;
-              var jpgFullFile = imglib.encodeJpg(convertedImage);
-              new File(pathFull).writeAsBytesSync(jpgFullFile);
-
-              // String barcode = await scanner.scanPath(pathFull);
-              // log(barcode);
-              final rest = await FlutterQrReader.imgScan(pathFull);
-              log(rest);
 
               imglib.Image croppedImage = imglib.copyCrop(
                   convertedImage, x.round(), y.round(), w.round(), h.round());
@@ -795,12 +830,18 @@ class FaceRecState extends State<FaceRec> {
                   (y <= 160)) {
                 if (st == 1) {*/
 
+              if ((w >= 80) &&
+                  (w <= 170) &&
+                  (x >= 20) &&
+                  (x <= 130) &&
+                  (y >= 60) &&
+                  (y <= 180)) {
                 if (st == 1) {
                   SettingState.instance.sendOnMessageToBluetooth();
                   xsuhu1 = SettingState.instance
                       .bacaSuhu(SettingState.instance.jsonMessage);
                   double dbStatus1 = double.parse(xsuhu1);
-                  temp = kalibrasi2(dbStatus1);
+                  temp = kalibrasi(dbStatus1);
                   xsuhu = temp.toStringAsFixed(2);
                   int th = DateTime.now().year;
                   //int mt = DateTime.now().month;
@@ -809,129 +850,105 @@ class FaceRecState extends State<FaceRec> {
                   //String str1 = "359306105515041"; //TAB2
                   //if (str1.compareTo(_platformImei) != 0) {
                   //if ((mt >= 8) || (th > 2021)) {
-                  if (th > 2022) {
-                    xsuhu = "Hubungi:Lunari";
-                    stTemp = "081295982363";
-                  } else {
-                    stTemp = "NORMAL";
-                    /*setSuhu = parsedJson['suhu'];
+                  // if (th > 2022) {
+                  //   xsuhu = "Hubungi:Lunari";
+                  //   stTemp = "081295982363";
+                  // } else {
+                  stTemp = "NORMAL";
+                  /*setSuhu = parsedJson['suhu'];
                     setMask = parsedJson['mask'];
                     setSound = parsedJson['sound'];*/
-                    double setSH = double.parse(setSuhu);
-                    double setSM = double.parse(setMask);
-                    double setSS = double.parse(setSound);
-                    if (temp >= setSH) {
-                      stTemp = "DI ATAS NORMAL";
-                      xwarna = 1;
+                  double setSH = double.parse(setSuhu);
+                  double setSM = double.parse(setMask);
+                  double setSS = double.parse(setSound);
+                  if (temp >= setSH) {
+                    stTemp = "DI ATAS NORMAL";
+                    xwarna = 1;
+                  } else {
+                    stTemp = "NORMAL";
+                    xwarna = 0;
+                  }
+                  co++;
+                  if (co >= 7) {
+                    //FaceRecState.instance.stopCamera();
+                    //ScanQrCode();
+                    croppedImage =
+                        imglib.copyResizeCropSquare(croppedImage, 112);
+                    // res = _recog(croppedImage);
+                    if (rest.toString() == "null") {
+                      res = null;
                     } else {
-                      stTemp = "NORMAL";
-                      xwarna = 0;
+                      res = await dbHelper1.query(rest);
                     }
-                    co++;
-                    if (co >= 7) {
-                      //FaceRecState.instance.stopCamera();
-                      //ScanQrCode();
-                      croppedImage =
-                          imglib.copyResizeCropSquare(croppedImage, 112);
-                      res = _recog(croppedImage);
-                      if (res == null) res = "PENGUNJUNG";
-                      _res = res;
-                      finalResult.add(_res, _face);
-                      st = 0;
-                      String tgl = ambilTanggal();
-                      String jam = ambilJam();
-                      dt = tgl + " " + jam;
-                      String path = MyApp.imgDir;
-                      String namafile = '$deviceID-$tgl$jam.png';
-                      path = path + "/" + namafile;
-                      _path = path;
-                      _namefile = namafile;
-                      _tgl = tgl;
-                      _jam = jam;
+                    if (res == null) res = "PENGUNJUNG";
+                    _res = res;
+                    res = null;
+                    finalResult.add(_res, _face);
+                    st = 0;
+                    String tgl = ambilTanggal();
+                    String jam = ambilJam();
+                    dt = tgl + " " + jam;
+                    String path = MyApp.imgDir;
+                    String namafile = '$deviceID-$tgl$jam.png';
+                    path = path + "/" + namafile;
+                    _path = path;
+                    _namefile = namafile;
+                    _tgl = tgl;
+                    _jam = jam;
 
-                      imglib.Image croppedImage1 = imglib.copyCrop(
-                          convertedImage,
-                          x.round() - 25,
-                          y.round() - 25,
-                          w.round() + 50,
-                          h.round() + 50);
-                      /*x.round() + 35,
+                    imglib.Image croppedImage1 = imglib.copyCrop(
+                        convertedImage,
+                        x.round() - 25,
+                        y.round() - 25,
+                        w.round() + 50,
+                        h.round() + 50);
+                    /*x.round() + 35,
                           y.round() + 25,
                           w.round() - 70,
                           h.round() - 50);*/
-                      croppedImage1 =
-                          imglib.copyResizeCropSquare(croppedImage1, 128);
-                      var pngFile = imglib.encodePng(croppedImage1);
-                      new File(path).writeAsBytesSync(pngFile);
+                    croppedImage1 =
+                        imglib.copyResizeCropSquare(croppedImage1, 128);
+                    var pngFile = imglib.encodePng(croppedImage1);
+                    new File(path).writeAsBytesSync(pngFile);
+                    log("pengenalan wajah3");
 
-                      String path1 = MyApp.imgDir;
-                      String namafile1 = 'temp.png';
-                      path1 = path1 + "/" + namafile1;
-                      imglib.Image croppedImage2 = imglib.copyCrop(
-                          convertedImage,
-                          /*x.round(),
+                    String path1 = MyApp.imgDir;
+                    String namafile1 = 'temp.png';
+                    path1 = path1 + "/" + namafile1;
+                    imglib.Image croppedImage2 = imglib.copyCrop(
+                        convertedImage,
+                        /*x.round(),
                           y.round(),
                           w.round(),
                           h.round());*/
-                          x.round() - 25,
-                          y.round() - 25,
-                          w.round() + 50,
-                          h.round() + 50);
-                      /*x.round() + 35,
+                        x.round() - 25,
+                        y.round() - 25,
+                        w.round() + 50,
+                        h.round() + 50);
+                    /*x.round() + 35,
                           y.round() + 25,
                           w.round() - 70,
                           h.round() - 50);*/
-                      //croppedImage2 =
-                      //    imglib.copyResizeCropSquare(croppedImage2, 32);
+                    //croppedImage2 =
+                    //    imglib.copyResizeCropSquare(croppedImage2, 32);
+                    log("pengenalan wajah4");
 
-                      var pngFile1 = imglib.encodePng(croppedImage2);
-                      new File(path1).writeAsBytesSync(pngFile1);
-                      String nilai = await processImage(new File(path1));
-                      int number = int.parse(nilai);
-                      if (number == 0)
-                        stMask = "MASK";
-                      else
-                        stMask = "NO MASK";
-                      if (setSM == 1) {
-                        if ((number != 0) && (setSS == 1)) {
-                          xwarna = 2;
-                          if (_res.compareTo('PENGUNJUNG') == 0)
-                            text = "mohon menggunakan masker anda";
-                          else
-                            text = "$_res mohon menggunakan masker anda";
-                          _speak();
-                        } else {
-                          if ((xwarna == 1) && (setSS == 1)) {
-                            String str = xsuhu.replaceAll(".", ",");
-                            if (_res.compareTo('PENGUNJUNG') == 0)
-                              text = "maaf suhu tubuh anda diatas normal " +
-                                  str +
-                                  " derajat celsius";
-                            else
-                              text =
-                                  "$_res maaf suhu tubuh anda diatas normal " +
-                                      str +
-                                      " derajat celsius";
-                            _speak();
-                          }
-                          if ((xwarna == 0) && (setSS == 1)) {
-                            String str = xsuhu.replaceAll(".", ",");
-                            if (_res.compareTo('PENGUNJUNG') == 0)
-                              text = "suhu tubuh anda normal " +
-                                  str +
-                                  " derajat celsius";
-                            else
-                              text = "$_res suhu tubuh anda normal " +
-                                  str +
-                                  " derajat celsius";
-                            // stopCamera1();
-                            // Navigator.pushReplacement(
-                            //     context,
-                            //     MaterialPageRoute(
-                            //         builder: (context) => ScanQrCode()));
-                            _speak();
-                          }
-                        }
+                    var pngFile1 = imglib.encodePng(croppedImage2);
+                    new File(path1).writeAsBytesSync(pngFile1);
+                    String nilai = await processImage(new File(path1));
+                    int number = int.parse(nilai);
+                    if (number == 0)
+                      stMask = "MASK";
+                    else
+                      stMask = "NO MASK";
+                    if (setSM == 1) {
+                      if ((number != 0) && (setSS == 1)) {
+                        xwarna = 2;
+                        if (_res.compareTo('PENGUNJUNG') == 0)
+                          text = "mohon menggunakan masker anda";
+                        else
+                          text = "$_res mohon menggunakan masker anda";
+                        _speak();
                       } else {
                         if ((xwarna == 1) && (setSS == 1)) {
                           String str = xsuhu.replaceAll(".", ",");
@@ -955,16 +972,54 @@ class FaceRecState extends State<FaceRec> {
                             text = "$_res suhu tubuh anda normal " +
                                 str +
                                 " derajat celsius";
+                          // stopCamera1();
+                          // Navigator.pushReplacement(
+                          //     context,
+                          //     MaterialPageRoute(
+                          //         builder: (context) => ScanQrCode()));
                           _speak();
                         }
                       }
-                      Contact contact =
-                          Contact(_tgl, _jam, xsuhu, stTemp, stMask, path);
-                      addContact(contact);
-                      _backupdata(dt, deviceID, xsuhu, stTemp, stMask, _res,
-                          _namefile, _path);
-
-                      /*datastorage.read().then((String value) {
+                      setState(() {
+                        _qrOn = false;
+                      });
+                    } else {
+                      if ((xwarna == 1) && (setSS == 1)) {
+                        String str = xsuhu.replaceAll(".", ",");
+                        if (_res.compareTo('PENGUNJUNG') == 0)
+                          text = "maaf suhu tubuh anda diatas normal " +
+                              str +
+                              " derajat celsius";
+                        else
+                          text = "$_res maaf suhu tubuh anda diatas normal " +
+                              str +
+                              " derajat celsius";
+                        _speak();
+                      }
+                      if ((xwarna == 0) && (setSS == 1)) {
+                        String str = xsuhu.replaceAll(".", ",");
+                        if (_res.compareTo('PENGUNJUNG') == 0)
+                          text = "suhu tubuh anda normal " +
+                              str +
+                              " derajat celsius";
+                        else
+                          text = "$_res suhu tubuh anda normal " +
+                              str +
+                              " derajat celsius";
+                        _speak();
+                      }
+                      setState(() {
+                        _qrOn = false;
+                      });
+                    }
+                    Contact contact =
+                        Contact(_tgl, _jam, xsuhu, stTemp, stMask, path);
+                    addContact(contact);
+                    _backupdata(dt, deviceID, xsuhu, stTemp, stMask, _res,
+                        _namefile, _path);
+                    rest = null;
+                    cntTimer = 0;
+                    /*datastorage.read().then((String value) {
                         try {
                           _str = value;
                         } on Exception catch (e) {
@@ -1003,21 +1058,21 @@ class FaceRecState extends State<FaceRec> {
                         }
                         //if (jumSend == co2) datastorage.clean();
                       });*/
-                      _backupdata(dt, deviceID, xsuhu, stTemp, stMask, _res,
-                          _namefile, _path);
-                      String str1 =
-                          "{datetime=$dt,deviceID=$deviceID,temp=$xsuhu,stTemp=$stTemp,stMask=$stMask,name=$_res,namefile=$_namefile,namepath=$_path}";
-                      bacaData(str1);
-                      sendDataAll(_datetime, _deviceID, _temp, _stTemp, _stMask,
-                          _nama, _namefile, _namepath, _url);
-                      setState(() {
-                        showStatusBar = false;
-                      });
-                    }
+                    _backupdata(dt, deviceID, xsuhu, stTemp, stMask, _res,
+                        _namefile, _path);
+                    String str1 =
+                        "{datetime=$dt,deviceID=$deviceID,temp=$xsuhu,stTemp=$stTemp,stMask=$stMask,name=$_res,namefile=$_namefile,namepath=$_path}";
+                    bacaData(str1);
+                    sendDataAll(_datetime, _deviceID, _temp, _stTemp, _stMask,
+                        _nama, _namefile, _namepath, _url);
                     setState(() {
-                      _scanResults = finalResult;
+                      showStatusBar = false;
                     });
                   }
+                  setState(() {
+                    _scanResults = finalResult;
+                  });
+                  // }
                 }
                 mul = 1;
                 if (co >= 7) {
@@ -1025,18 +1080,19 @@ class FaceRecState extends State<FaceRec> {
                     showStatusBar = true;
                   });
                 }
-
-              if ((result.length > 1) && (mul == 1) && (co >= 7)) {
-                setState(() {
-                  showStatusBar = true;
-                });
               } else {
-                st = 1;
-                co = 0;
-                mul = 0;
-                setState(() {
-                  showStatusBar = false;
-                });
+                if ((result.length > 1) && (mul == 1) && (co >= 7)) {
+                  setState(() {
+                    showStatusBar = true;
+                  });
+                } else {
+                  st = 1;
+                  co = 0;
+                  mul = 0;
+                  setState(() {
+                    showStatusBar = false;
+                  });
+                }
               }
               if (_faceFound == false) {
                 st = 1;
@@ -1059,7 +1115,6 @@ class FaceRecState extends State<FaceRec> {
               _scanResults = finalResult;
               //_res = res;
             });
-
             _isDetecting = false;
           },
         ).catchError(
@@ -1277,7 +1332,29 @@ class FaceRecState extends State<FaceRec> {
                   ),
                 ),
                 !showStatusBar
-                    ? Align()
+                    ? Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          height: 100.0,
+                          margin: EdgeInsets.all(24),
+                          padding: EdgeInsets.all(10),
+                          alignment: Alignment.center,
+                          color: Color.fromARGB(255, 2, 156, 225),
+                          child: Text(
+                            !_qrOn
+                                ? "Proses Rekam Wajah atau Scan QR Code"
+                                : "Proses Rekam Wajah Member",
+                            style: TextStyle(
+                              decoration: TextDecoration.none,
+                              fontSize: 25,
+                              fontFamily: "Montserrat",
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
                     : Align(
                         child: ListView(children: <Widget>[
                           Container(

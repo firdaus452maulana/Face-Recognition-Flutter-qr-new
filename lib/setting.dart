@@ -181,8 +181,8 @@ class SettingState extends State<Setting> {
                 padding: EdgeInsets.only(right: 20.0),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
-                    // Navigator.pushNamed(context, '/');
+                    // Navigator.pop(context);
+                    Navigator.pushNamed(context, '/');
                   },
                   child: Icon(
                     Icons.home,
