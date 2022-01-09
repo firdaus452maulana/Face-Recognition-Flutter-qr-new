@@ -586,7 +586,7 @@ class SettingState extends State<Setting> {
   }
 
   // Method to disconnect bluetooth
-  void _disconnect() async {
+  Future <void> _disconnect() async {
     setState(() {
       _isButtonUnavailable = true;
       _deviceState = 0;
@@ -608,9 +608,9 @@ class SettingState extends State<Setting> {
     _disconnect();
   }
 
-  void autoconnect() {
-    _disconnect();
-    Timer(Duration(milliseconds: 50), () {
+  void autoconnect() async {
+    await _disconnect();
+    Timer(Duration(milliseconds: 500), () {
       _connect();
     });
   }

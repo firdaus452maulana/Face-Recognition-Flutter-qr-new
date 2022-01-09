@@ -1335,7 +1335,7 @@ class FaceRecState extends State<FaceRec> {
                     ? Align(
                         alignment: Alignment.bottomCenter,
                         child: Container(
-                          height: 100.0,
+                          height: 135.0,
                           margin: EdgeInsets.all(24),
                           padding: EdgeInsets.all(10),
                           alignment: Alignment.center,
@@ -1349,7 +1349,7 @@ class FaceRecState extends State<FaceRec> {
                               fontSize: 25,
                               fontFamily: "Montserrat",
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: !_qrOn ? Colors.white : Colors.red,
                             ),
                             textAlign: TextAlign.center,
                           ),
