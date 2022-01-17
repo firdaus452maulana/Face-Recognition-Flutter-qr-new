@@ -218,9 +218,9 @@ class MemberState extends State<Member> {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: Colors.red,
-              backgroundImage: FileImage(File(
-                  contactList1[contactList1.length - index - 1 - start]
-                      .imgPath1)),
+              // backgroundImage: FileImage(File(
+              //     contactList1[contactList1.length - index - 1 - start]
+              //         .imgPath1)),
             ),
             title: Text(
               this.contactList1[contactList1.length - index - 1 - start].name1 +

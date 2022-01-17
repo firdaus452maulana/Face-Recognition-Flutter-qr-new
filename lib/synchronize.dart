@@ -501,19 +501,19 @@ class SynchronizeState extends State<Synchronize> {
                         int jumlah = int.parse(dataTotal);
                         String imageurl, nama, fitur, memberID;
                         int kk;
-                        String newString = '{';
+                        // String newString = '{';
                         for (kk = 0; kk < jumlah; kk++) {
                           nama = tagsJson['data_member'][kk]['name'];
                           imageurl = tagsJson['data_member'][kk]['imageurl'];
-                          fitur = tagsJson['data_member'][kk]['fitur_data'];
+                          // fitur = tagsJson['data_member'][kk]['fitur_data'];
                           memberID = tagsJson['data_member'][kk]['memberid'];
                           _handle(imageurl, nama, fitur, memberID);
-                          newString = newString + '"$nama":$fitur,';
+                          // newString = newString + '"$nama":$fitur,';
                         }
-                        String strn =
-                            newString.substring(0, newString.length - 1);
-                        strn = strn + '}';
-                        jsonFile.writeAsString(strn);
+                        // String strn =
+                        //     newString.substring(0, newString.length - 1);
+                        // strn = strn + '}';
+                        // jsonFile.writeAsString(strn);
 
                         /*String str1 = dataMember;
                         int pj = str1.length;

@@ -141,6 +141,7 @@ class FaceRecState extends State<FaceRec> {
   int jumSend = 0;
   String _str;
   bool _qrOn = false;
+  bool _stbyMode = false;
 
   //String _pilih = "_NOMASK";
   //String _mask = "0";
@@ -718,6 +719,7 @@ class FaceRecState extends State<FaceRec> {
     await loadModel();
     String rest;
     int cntTimer = 0;
+    int toStbyMode = 0;
     CameraDescription description = await getCamera(_direction);
 
     ImageRotation rotation = rotationIntToImageRotation(
@@ -746,40 +748,47 @@ class FaceRecState extends State<FaceRec> {
         if (_isDetecting) return;
         _isDetecting = true;
         //String out = cekMasker(image);
-        log("Lagi deteksi");
+        // log("Lagi deteksi");
         String res;
         dynamic finalResult = Multimap<String, Face>();
 
         imglib.Image convertedImageFull =
             _convertCameraImage(image, _direction);
 
-        String pathFull = MyApp.imgDir;
-        String namafileFull = '$deviceID-fullCapt.jpg';
-        pathFull = pathFull + "/" + namafileFull;
-        var jpgFullFile = imglib.encodeJpg(convertedImageFull);
-        new File(pathFull).writeAsBytesSync(jpgFullFile);
+        if (toStbyMode < 100) {
+          String pathFull = MyApp.imgDir;
+          String namafileFull = '$deviceID-fullCapt.jpg';
+          pathFull = pathFull + "/" + namafileFull;
+          var jpgFullFile = imglib.encodeJpg(convertedImageFull);
+          new File(pathFull).writeAsBytesSync(jpgFullFile);
 
-        // String barcode = await scanner.scanPath(pathFull);
-        // log(barcode);
-        FlutterQrReader.imgScan(pathFull).then((value) {
-          if (value.length >= 2) {
-            rest = value;
-            log(rest);
-            setState(() {
-              _qrOn = true;
-            });
-            cntTimer++;
-            if (cntTimer == 1) {
-              Timer(Duration(seconds: 5), () {
-                setState(() {
-                  rest = null;
-                  cntTimer = 0;
-                  _qrOn = false;
-                });
+          // String barcode = await scanner.scanPath(pathFull);
+          // log(barcode);
+          FlutterQrReader.imgScan(pathFull).then((value) {
+            if (value.length >= 2) {
+              rest = value;
+              // log(rest);
+              setState(() {
+                _qrOn = true;
               });
+              cntTimer++;
+              if (cntTimer == 1) {
+                Timer(Duration(seconds: 5), () {
+                  setState(() {
+                    rest = null;
+                    cntTimer = 0;
+                    _qrOn = false;
+                  });
+                });
+              }
             }
-          }
-        });
+          });
+          toStbyMode++;
+        } else {
+          setState(() {
+            _stbyMode = true;
+          });
+        }
 
         detect(image, _getDetectionMethod(), rotation).then(
           (dynamic result) async {
@@ -804,6 +813,11 @@ class FaceRecState extends State<FaceRec> {
               y = (_face.boundingBox.top - 10);
               w = (_face.boundingBox.width + 20);
               h = (_face.boundingBox.height + 20);
+
+              setState(() {
+                toStbyMode = 0;
+                _stbyMode = false;
+              });
 
               imglib.Image croppedImage = imglib.copyCrop(
                   convertedImage, x.round(), y.round(), w.round(), h.round());
@@ -910,7 +924,7 @@ class FaceRecState extends State<FaceRec> {
                         imglib.copyResizeCropSquare(croppedImage1, 128);
                     var pngFile = imglib.encodePng(croppedImage1);
                     new File(path).writeAsBytesSync(pngFile);
-                    log("pengenalan wajah3");
+                    // log("pengenalan wajah3");
 
                     String path1 = MyApp.imgDir;
                     String namafile1 = 'temp.png';
@@ -931,7 +945,7 @@ class FaceRecState extends State<FaceRec> {
                           h.round() - 50);*/
                     //croppedImage2 =
                     //    imglib.copyResizeCropSquare(croppedImage2, 32);
-                    log("pengenalan wajah4");
+                    // log("pengenalan wajah4");
 
                     var pngFile1 = imglib.encodePng(croppedImage2);
                     new File(path1).writeAsBytesSync(pngFile1);
@@ -1322,39 +1336,67 @@ class FaceRecState extends State<FaceRec> {
               children: <Widget>[
                 CameraPreview(_camera),
                 //_buildResults(),
-                Align(
-                  alignment: Alignment.center,
-                  child: Image(
-                    image: AssetImage("images/blue_rect.png"),
-                    fit: BoxFit.fill,
-                    width: 320,
-                    height: 320,
-                  ),
-                ),
+                !_stbyMode
+                    ? Align(
+                        alignment: Alignment.center,
+                        child: Image(
+                          image: AssetImage("images/blue_rect.png"),
+                          fit: BoxFit.fill,
+                          width: 320,
+                          height: 320,
+                        ),
+                      )
+                    : Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          color: Color.fromARGB(125, 0, 0, 0),
+                          alignment: Alignment.center,
+                          child: Container(
+                            height: 135.0,
+                            margin: EdgeInsets.all(24),
+                            padding: EdgeInsets.all(10),
+                            alignment: Alignment.center,
+                            color: Color.fromARGB(255, 2, 156, 225),
+                            child: Text(
+                              "Stand By Mode \n (Scan Wajah untuk Memulai)",
+                              style: TextStyle(
+                                decoration: TextDecoration.none,
+                                fontSize: 25,
+                                fontFamily: "Montserrat",
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )),
                 !showStatusBar
                     ? Align(
                         alignment: Alignment.bottomCenter,
-                        child: Container(
-                          height: 135.0,
-                          margin: EdgeInsets.all(24),
-                          padding: EdgeInsets.all(10),
-                          alignment: Alignment.center,
-                          color: Color.fromARGB(255, 2, 156, 225),
-                          child: Text(
-                            !_qrOn
-                                ? "Proses Rekam Wajah atau Scan QR Code"
-                                : "Proses Rekam Wajah Member",
-                            style: TextStyle(
-                              decoration: TextDecoration.none,
-                              fontSize: 25,
-                              fontFamily: "Montserrat",
-                              fontWeight: FontWeight.bold,
-                              color: !_qrOn ? Colors.white : Colors.red,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
+                        child: !_stbyMode
+                            ? Container(
+                                height: 135.0,
+                                margin: EdgeInsets.all(24),
+                                padding: EdgeInsets.all(10),
+                                alignment: Alignment.center,
+                                color: !_qrOn
+                                    ? Color.fromARGB(255, 2, 156, 225)
+                                    : Color.fromARGB(255, 220, 20, 60),
+                                child: Text(
+                                  !_qrOn
+                                      ? "Proses Rekam Wajah atau Scan QR Code"
+                                      : "Proses Rekam Wajah Member",
+                                  style: TextStyle(
+                                    decoration: TextDecoration.none,
+                                    fontSize: 25,
+                                    fontFamily: "Montserrat",
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : null)
                     : Align(
                         child: ListView(children: <Widget>[
                           Container(
