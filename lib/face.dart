@@ -803,10 +803,10 @@ class FaceRecState extends State<FaceRec> {
             int jum = 0;
             for (_face in result) {
               mul = 0;
-              if (jum == 1)
-                break;
-              else
-                jum++;
+              // if (jum == 1)
+              //   break;
+              // else
+              //   jum++;
 
               //double x, y, w, h;
               x = (_face.boundingBox.left - 10);
